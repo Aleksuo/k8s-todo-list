@@ -12,7 +12,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin rust-api
 
-FROM debian:bookworm-slim AS runtime
+FROM alpine AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/rust-api /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/rust-api"]
