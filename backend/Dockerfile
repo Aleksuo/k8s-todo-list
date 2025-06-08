@@ -1,35 +1,18 @@
-FROM docker.io/rust:1-slim-bookworm AS build
-
-## cargo package name: customize here or provide via --build-arg
-ARG pkg=rocket-app
-
-WORKDIR /build
-
-COPY . .
-
-RUN --mount=type=cache,target=/build/target \
-    --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    set -eux; \
-    cargo build --release; \
-    objcopy --compress-debug-sections target/release/project ./main
-
-################################################################################
-
-FROM docker.io/debian:bookworm-slim
-
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
-## copy the main binary
-COPY --from=build /build/main ./
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-## copy runtime assets which may or may not exist
-COPY --from=build /build/Rocket.tom[l] ./static
-COPY --from=build /build/stati[c] ./static
-COPY --from=build /build/template[s] ./templates
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 
-## ensure the container listens globally on port 8080
-ENV ROCKET_ADDRESS=0.0.0.0
-ENV ROCKET_PORT=8080
+COPY . .
+RUN cargo build --release --bin rust-api
 
-CMD ./main
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/release/rust-api /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/rust-api"]

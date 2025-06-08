@@ -1,11 +1,19 @@
-#[macro_use] extern crate rocket;
+use axum::{
+    routing::get,
+    Router
+};
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+#[tokio::main]
+async fn main() {
+    let routes = Router::new().route("/hello-world", get(hello_world));
+    let app = Router::new()
+    .nest("/api", routes);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    print!("Starting a server at port 8080");
+    axum::serve(listener, app).await.unwrap();
 }
 
-#[launch]
-fn rocket() -> _ {
-    rocket::build().mount("/", routes![index])
+async fn hello_world() -> String {
+    return "Hello World!".to_string();
 }

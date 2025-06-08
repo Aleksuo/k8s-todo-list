@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-todo-ingress
+  labels:
+    name: k8s-todo-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - pathType: Prefix
+        path: /api
+        backend:
+          service:
+            name: rust-api-svc
+            port:
+             number: 8080
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: nginx-frontend-svc
+            port: 
+              number: 80
