@@ -1,5 +1,7 @@
-.center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.center-stack {
+  display: flex;            
+  flex-direction: column;   
+  justify-content: center;  
+  align-items: center;      
+  min-height: 100vh; 
 }
