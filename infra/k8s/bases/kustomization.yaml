@@ -4,3 +4,4 @@
    - backend
    - frontend
    - ingress
+   - pv

@@ -6,6 +6,7 @@ metadata:
   labels:
     app: rust-api
 spec:
+  
   replicas: 1
   selector:
     matchLabels:
@@ -15,6 +16,13 @@ spec:
       labels:
         app: rust-api
     spec:
+      volumes:
+      - name: pic
+        persistentVolumeClaim:
+          claimName: pic-pvc
       containers:
       - name: rust-api
-        image: dev-registry.localhost:5000/rust-api
+        image: dev-registry.localhost:5000/rust-api:latest
+        volumeMounts:
+          - name: pic
+            mountPath: /usr/src/app/files

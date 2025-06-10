@@ -17,4 +17,4 @@ spec:
     spec:
       containers:
       - name: nginx-frontend
-        image: dev-registry.localhost:5000/nginx-frontend
+        image: dev-registry.localhost:5000/nginx-frontend:latest

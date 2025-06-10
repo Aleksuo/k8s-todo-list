@@ -1,19 +1,135 @@
-use axum::{
-    routing::get,
-    Router
+use std::{
+    str::FromStr,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
+use axum::{
+    Router, body::Bytes, extract::State, http::HeaderMap, response::IntoResponse, routing::get,
+};
+use chrono::{DateTime, Utc};
+use reqwest::{
+    Client, StatusCode,
+    header::{self, CONTENT_TYPE},
+};
+use std::env;
+
+#[derive(Clone)]
+struct Config {
+    timestamp_path: String,
+    image_path: String,
+}
+
+fn read_config() -> Config {
+    let image_path = env::var("IMAGE_PATH").unwrap_or("pic.jpeg".to_string());
+    let timestamp_path = env::var("TIMESTAMP_PATH").unwrap_or("timestamp.txt".to_string());
+    Config {
+        timestamp_path,
+        image_path,
+    }
+}
+
+#[derive(Clone)]
+struct AppState {
+    http: Client,
+    config: Config,
+}
+const CACHE_TIME: i64 = 3600000;
 
 #[tokio::main]
 async fn main() {
-    let routes = Router::new().route("/hello-world", get(hello_world));
-    let app = Router::new()
-    .nest("/api", routes);
+    let http = Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap();
+    let config = read_config();
+
+    let app_state = AppState { http, config };
+    let routes = Router::new()
+        .route("/hello-world", get(hello_world_handler))
+        .route("/pic", get(get_pic_handler));
+
+    let app = Router::new().nest("/api", routes).with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     print!("Starting a server at port 8080");
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn hello_world() -> String {
+async fn hello_world_handler() -> String {
     return "Hello World!".to_string();
+}
+
+async fn get_pic_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let timestamp = tokio::fs::read_to_string(&state.config.timestamp_path).await;
+    let timestamp = match timestamp {
+        Ok(timestamp) => timestamp,
+        Err(_) => {
+            // File does not exist, initialize the timestamp.txt
+            let start_time = UNIX_EPOCH;
+            let start_dt: DateTime<Utc> = start_time.into();
+            let start_str = start_dt.to_string();
+            tokio::fs::write(&state.config.timestamp_path, &start_str)
+                .await
+                .unwrap();
+            start_str
+        }
+    };
+
+    let fetch_new_pic = {
+        let cur_time_dt: DateTime<Utc> = SystemTime::now().into();
+        let timestamp_dt: DateTime<Utc> = DateTime::from_str(&timestamp).unwrap();
+        (cur_time_dt.timestamp_millis() - timestamp_dt.timestamp_millis()) > CACHE_TIME
+    };
+
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, header::HeaderValue::from_static("image/jpeg"));
+
+    if fetch_new_pic {
+        let new_pic = get_new_pic_and_update_files(&state).await;
+        return (StatusCode::OK, headers, new_pic);
+    }
+    // Fetch old pic from disk instead
+
+    let img = tokio::fs::read(&state.config.image_path).await;
+    let img = match img {
+        Ok(img) => {
+            Bytes::from(img)
+        }
+        Err(_) => {
+            get_new_pic_and_update_files(&state).await
+        }
+    };
+    return (StatusCode::OK, headers, img);
+}
+
+async fn get_new_pic_and_update_files(state: &AppState) -> Bytes {
+    let new_pic = get_new_pic(&state).await;
+    save_pic_to_file(&state.config.image_path, &new_pic).await;
+    save_current_time_to_file(&state.config.timestamp_path).await;
+    new_pic
+}
+
+async fn get_new_pic(state: &AppState) -> Bytes {
+    state
+        .http
+        .get("https://picsum.photos/200")
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+        .expect("unable to fetch a pic")
+        .bytes()
+        .await
+        .unwrap()
+}
+
+async fn save_pic_to_file(fpath: &String, img: &Bytes) {
+    tokio::fs::write(fpath, img).await.unwrap();
+}
+
+async fn save_current_time_to_file(fpath: &String) {
+    let cur_time = SystemTime::now();
+    let cur_time_dt: DateTime<Utc> = cur_time.into();
+    tokio::fs::write(fpath, cur_time_dt.to_string())
+        .await
+        .unwrap();
 }
