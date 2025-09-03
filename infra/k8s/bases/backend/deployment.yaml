@@ -22,7 +22,7 @@ spec:
           claimName: pic-pvc
       containers:
       - name: rust-api
-        image: dev-registry.localhost:5000/rust-api:latest
+        image: rust-api
         volumeMounts:
           - name: pic
             mountPath: /usr/src/app/files
