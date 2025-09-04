@@ -6,5 +6,7 @@ docker_build('rust-api',
              dockerfile="backend/Dockerfile")
 docker_build('nginx-frontend',
              context='frontend',
+             target='production',
+            # live_update=[sync('./frontend/src', '/usr/src/app/src')],
              dockerfile="frontend/Dockerfile")
 k8s_yaml(kustomize('infra/k8s/bases'))
