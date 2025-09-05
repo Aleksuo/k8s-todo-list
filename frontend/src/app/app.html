@@ -1,13 +1,14 @@
 <div class="center-stack">
   <img [src]="img$ | async" />
-     <span><input
-  type="text"
-  maxlength="140"
-  > <button>Send todo</button></span>
+     <span><input type="text"
+                  maxlength="140"
+                  [formControl]="control"
+  > <button (click)="onSubmit()">Send todo</button></span>
  
-    <ul>
-    <li>Todo 1</li>
-    <li>Todo 2</li>
+  <ul>
+  @for (todo of todos$ | async; track $index) {
+    <li>{{todo.value}}</li>
+  }
   </ul>
   
 </div>

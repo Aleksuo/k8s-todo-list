@@ -3,6 +3,11 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export interface Todo {
+  id: string;
+  value: string;
+}
+
+export interface CreateTodo {
   value: string;
 }
 
@@ -16,7 +21,7 @@ export class TodosService {
     return this.httpClient.get<Todo[]>("/api/todos");
   }
 
-  create(todo: Todo) {
+  create(todo: CreateTodo) {
     return this.httpClient.post<Todo>("/api/todos", todo);
   }
 
