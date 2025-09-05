@@ -1,17 +1,37 @@
 use std::{
     str::FromStr,
+    sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use axum::{
-    Router, body::Bytes, extract::State, http::HeaderMap, response::IntoResponse, routing::get,
+    Json, Router,
+    body::Bytes,
+    extract::{self, State},
+    http::HeaderMap,
+    response::IntoResponse,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
 use reqwest::{
     Client, StatusCode,
     header::{self, CONTENT_TYPE},
 };
+use serde::{Deserialize, Serialize};
 use std::env;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+#[derive(Clone, Serialize)]
+struct Todo {
+    id: Uuid,
+    value: String,
+}
+
+#[derive(Deserialize)]
+struct CreateTodo {
+    value: String,
+}
 
 #[derive(Clone)]
 struct Config {
@@ -32,6 +52,7 @@ fn read_config() -> Config {
 struct AppState {
     http: Client,
     config: Config,
+    todos: Arc<RwLock<Vec<Todo>>>,
 }
 const CACHE_TIME: i64 = 3600000;
 
@@ -43,10 +64,16 @@ async fn main() {
         .unwrap();
     let config = read_config();
 
-    let app_state = AppState { http, config };
+    let app_state = AppState {
+        http,
+        config,
+        todos: Arc::new(RwLock::new(vec![])),
+    };
     let routes = Router::new()
         .route("/hello-world", get(hello_world_handler))
-        .route("/pic", get(get_pic_handler));
+        .route("/pic", get(get_pic_handler))
+        .route("/todos", get(get_todos_handler))
+        .route("/todos", post(create_todo_handler));
 
     let app = Router::new().nest("/api", routes).with_state(app_state);
 
@@ -92,12 +119,8 @@ async fn get_pic_handler(State(state): State<AppState>) -> impl IntoResponse {
 
     let img = tokio::fs::read(&state.config.image_path).await;
     let img = match img {
-        Ok(img) => {
-            Bytes::from(img)
-        }
-        Err(_) => {
-            get_new_pic_and_update_files(&state).await
-        }
+        Ok(img) => Bytes::from(img),
+        Err(_) => get_new_pic_and_update_files(&state).await,
     };
     return (StatusCode::OK, headers, img);
 }
@@ -132,4 +155,21 @@ async fn save_current_time_to_file(fpath: &String) {
     tokio::fs::write(fpath, cur_time_dt.to_string())
         .await
         .unwrap();
+}
+
+async fn get_todos_handler(State(state): State<AppState>) -> Json<Vec<Todo>> {
+    Json(state.todos.read().await.clone())
+}
+
+async fn create_todo_handler(
+    State(state): State<AppState>,
+    extract::Json(payload): extract::Json<CreateTodo>,
+) -> Json<Todo> {
+    let new_todo = Todo {
+        id: Uuid::new_v4(),
+        value: payload.value,
+    };
+    let mut guard = state.todos.write().await;
+    guard.push(new_todo.clone());
+    Json(new_todo)
 }
