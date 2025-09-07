@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rust-api
-  namespace: default
+  namespace: project
   labels:
     app: rust-api
 spec:

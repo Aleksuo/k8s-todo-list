@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
+  namespace: project
   name: pic-pv
 spec:
   storageClassName: pic-pv
