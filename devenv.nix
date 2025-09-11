@@ -17,6 +17,13 @@
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
+  languages.javascript = {
+    enable = true;
+    npm = {
+      enable = true;
+      install.enable = true;
+    };
+  };
 
   # https://devenv.sh/processes/
   # processes.cargo-watch.exec = "cargo-watch";
