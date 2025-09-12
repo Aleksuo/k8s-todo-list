@@ -6,7 +6,6 @@ metadata:
   labels:
     app: rust-api
 spec:
-  
   replicas: 1
   selector:
     matchLabels:
@@ -23,6 +22,15 @@ spec:
       containers:
       - name: rust-api
         image: rust-api
+        envFrom:
+          - configMapRef:
+              name: backend-config
         volumeMounts:
           - name: pic
             mountPath: /usr/src/app/files
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"

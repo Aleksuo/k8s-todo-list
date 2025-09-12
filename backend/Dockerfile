@@ -22,6 +22,7 @@ WORKDIR /app
 
 ENV TIMESTAMP_PATH='/usr/src/app/files/timestamp.txt'
 ENV IMAGE_PATH='/usr/src/app/files/pic.jpeg'
+ENV SERVER_PORT=8080
 
 COPY --from=builder /app/target/release/rust-api /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/rust-api"]

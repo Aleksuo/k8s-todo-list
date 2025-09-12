@@ -37,14 +37,17 @@ struct CreateTodo {
 struct Config {
     timestamp_path: String,
     image_path: String,
+    server_port: String,
 }
 
 fn read_config() -> Config {
     let image_path = env::var("IMAGE_PATH").unwrap_or("pic.jpeg".to_string());
     let timestamp_path = env::var("TIMESTAMP_PATH").unwrap_or("timestamp.txt".to_string());
+    let server_port = env::var("SERVER_PORT").unwrap_or(8080.to_string());
     Config {
         timestamp_path,
         image_path,
+        server_port,
     }
 }
 
@@ -63,6 +66,8 @@ async fn main() {
         .build()
         .unwrap();
     let config = read_config();
+    let server_port = config.server_port.clone();
+    let server_address = format!("0.0.0.0:{}", server_port);
 
     let app_state = AppState {
         http,
@@ -76,9 +81,8 @@ async fn main() {
         .route("/todos", post(create_todo_handler));
 
     let app = Router::new().nest("/api", routes).with_state(app_state);
-
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    print!("Starting a server at port 8080");
+    let listener = tokio::net::TcpListener::bind(server_address).await.unwrap();
+    println!("Starting server at port {}", server_port);
     axum::serve(listener, app).await.unwrap();
 }
 

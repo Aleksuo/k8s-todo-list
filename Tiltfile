@@ -15,4 +15,5 @@ k8s_resource(
         link('http://localhost:8081/', 'App')
     ]
 )
-k8s_yaml(kustomize('infra/k8s/bases'))
+k8s_yaml(kustomize('infra/k8s/overlays/dev'))
+watch_file('./infra')
