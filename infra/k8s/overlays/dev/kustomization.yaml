@@ -5,5 +5,9 @@ configMapGenerator:
   - name: backend-config
     envs:
       - files/backend.env
-bases:
+secretGenerator:
+  - name: db-secret
+    envs:
+      - files/db.env
+resources:
   - ../../bases

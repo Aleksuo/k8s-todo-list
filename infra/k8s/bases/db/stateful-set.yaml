@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-stateful-set
+  namespace: exercises
+spec:
+  selector:
+    matchLabels:
+      app: db
+  serviceName: db-svc
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: db
+        image: postgres:17.6
+        envFrom:
+          - secretRef:
+              name: db-secret
+        ports:
+          - containerPort: 5432
+        volumeMounts:
+          - name: db-data-storage
+            mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: db-data-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 200Mi
