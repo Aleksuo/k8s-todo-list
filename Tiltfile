@@ -17,3 +17,5 @@ k8s_resource(
 )
 k8s_yaml(kustomize('infra/k8s/overlays/dev'))
 watch_file('./infra')
+
+k8s_resource(workload='db-stateful-set', port_forwards=5432)
