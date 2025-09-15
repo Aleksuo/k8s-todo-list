@@ -13,6 +13,7 @@
     pkgs.k9s
     pkgs.kubectx
     pkgs.openssl
+    pkgs.sea-orm-cli
   ];
 
   # https://devenv.sh/languages/
