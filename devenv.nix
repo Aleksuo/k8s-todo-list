@@ -33,6 +33,10 @@
   # services.postgres.enable = true;
 
   # https://devenv.sh/scripts/
+
+  scripts.gen-entities.exec = ''
+    sea-orm-cli generate entity -u postgres://projectuser:projectuserpw@localhost:5432/projectdb -l -o ./backend/entities/src
+  '';
   scripts.hello.exec = ''
     echo hello from $GREET
   '';
