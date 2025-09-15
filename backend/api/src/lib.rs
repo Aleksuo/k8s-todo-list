@@ -1,9 +1,3 @@
-pub use std::{
-    str::FromStr,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
-
 use axum::{
     Json, Router,
     body::Bytes,
@@ -13,15 +7,25 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
+use entities::todo;
 use migration::{Migrator, MigratorTrait};
 use reqwest::{
     Client, StatusCode,
     header::{self, CONTENT_TYPE},
 };
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ActiveModelTrait, EntityTrait};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    ConnectOptions, Database, DatabaseConnection,
+};
 use serde::{Deserialize, Serialize};
 use std::env;
-use tokio::sync::{OnceCell, RwLock};
+pub use std::{
+    str::FromStr,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::OnceCell;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize)]
@@ -57,7 +61,6 @@ fn read_config() -> Config {
 struct AppState {
     http: Client,
     config: Config,
-    todos: Arc<RwLock<Vec<Todo>>>,
 }
 const CACHE_TIME: i64 = 3600000;
 
@@ -82,11 +85,7 @@ pub async fn main() {
         })
         .await;
     Migrator::up(DB_CLIENT.get().unwrap(), None).await;
-    let app_state = AppState {
-        http,
-        config,
-        todos: Arc::new(RwLock::new(vec![])),
-    };
+    let app_state = AppState { http, config };
     let routes = Router::new()
         .route("/hello-world", get(hello_world_handler))
         .route("/pic", get(get_pic_handler))
@@ -175,18 +174,31 @@ async fn save_current_time_to_file(fpath: &String) {
 }
 
 async fn get_todos_handler(State(state): State<AppState>) -> Json<Vec<Todo>> {
-    Json(state.todos.read().await.clone())
+    let all_todos: Vec<Todo> = todo::Entity::find()
+        .all(DB_CLIENT.get().unwrap())
+        .await
+        .unwrap()
+        .iter()
+        .map(|todo_model| Todo {
+            id: todo_model.id,
+            value: todo_model.value.clone(),
+        })
+        .collect();
+    Json(all_todos)
 }
 
 async fn create_todo_handler(
     State(state): State<AppState>,
     extract::Json(payload): extract::Json<CreateTodo>,
 ) -> Json<Todo> {
-    let new_todo = Todo {
-        id: Uuid::new_v4(),
-        value: payload.value,
+    let new_todo = todo::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        value: Set(payload.value.to_owned()),
     };
-    let mut guard = state.todos.write().await;
-    guard.push(new_todo.clone());
-    Json(new_todo)
+    let saved_todo: todo::Model = new_todo.insert(DB_CLIENT.get().unwrap()).await.unwrap();
+    let todo_dto = Todo {
+        id: saved_todo.id,
+        value: saved_todo.value,
+    };
+    Json(todo_dto)
 }
