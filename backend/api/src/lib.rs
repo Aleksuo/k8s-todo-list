@@ -66,6 +66,13 @@ const CACHE_TIME: i64 = 3600000;
 
 static DB_CLIENT: OnceCell<DatabaseConnection> = OnceCell::const_new();
 
+const DB_PROTOCOL_ENV: &str = "DB_PROTOCOL";
+const DB_USER_ENV: &str = "DB_USER";
+const DB_PASSWORD_ENV: &str = "DB_PASSWORD";
+const DB_HOST_ENV: &str = "DB_HOST";
+const DB_NAME_ENV: &str = "DB_NAME";
+const DB_SCHEMA_ENV: &str = "DB_SCHEMA";
+
 #[tokio::main]
 pub async fn main() {
     let http = Client::builder()
@@ -78,8 +85,17 @@ pub async fn main() {
 
     DB_CLIENT
         .get_or_init(|| async {
-            let database_url =
-                "postgres://projectuser:projectuserpw@db-svc:5432/projectdb?currentSchema=public";
+            let protocol = env::var(DB_PROTOCOL_ENV).unwrap_or_default();
+            let db_user = env::var(DB_USER_ENV).unwrap_or_default();
+            let db_password = env::var(DB_PASSWORD_ENV).unwrap_or_default();
+            let db_host = env::var(DB_HOST_ENV).unwrap_or_default();
+            let db_name = env::var(DB_NAME_ENV).unwrap_or_default();
+            let db_schema = env::var(DB_SCHEMA_ENV).unwrap_or_default();
+
+            let database_url = format!(
+                "{}://{}:{}@{}/{}?currentSchema={}",
+                protocol, db_user, db_password, db_host, db_name, db_schema
+            );
             let opt = ConnectOptions::new(database_url);
             Database::connect(opt).await.unwrap()
         })

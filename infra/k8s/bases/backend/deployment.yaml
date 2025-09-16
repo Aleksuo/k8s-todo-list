@@ -25,6 +25,10 @@ spec:
         envFrom:
           - configMapRef:
               name: backend-config
+          - configMapRef:
+              name: db-config
+          - secretRef:
+              name: db-secret
         volumeMounts:
           - name: pic
             mountPath: /usr/src/app/files

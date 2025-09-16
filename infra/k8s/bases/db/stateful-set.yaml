@@ -17,9 +17,22 @@ spec:
       containers:
       - name: db
         image: postgres:17.6
-        envFrom:
-          - secretRef:
-              name: db-secret
+        envs:
+          - name: POSTGRES_DB
+            valueFrom:
+              configMapRef:
+                name: db-config
+                key: DB_NAME
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: DB_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: DB_PASSWORD
         ports:
           - containerPort: 5432
         volumeMounts:
