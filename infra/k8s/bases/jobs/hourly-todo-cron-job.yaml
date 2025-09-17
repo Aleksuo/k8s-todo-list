@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  namespace: project
+  name: todo-cron-job
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hourly-todo-cron-container
+            image: curlimages/curl:8.16.0
+            args:
+            - /bin/sh
+            - -ec
+            - |
+              LOCATION="$(curl https://en.wikipedia.org/wiki/Special:Random -o /dev/null -w '%header{location}')"
+              echo $LOCATION
+              curl -H "Content-Type: application/json" -d "{\"value\":\"Read ${LOCATION} \"}" http://rust-api-svc:8080/api/todos
+          restartPolicy: OnFailure
