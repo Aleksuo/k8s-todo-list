@@ -3,12 +3,12 @@ kind: Component
 resources:
   - namespace.yaml
 helmCharts:
-  - name: loki-stack
+  - name: loki
     repo: https://grafana.github.io/helm-charts
+    version: 6.30.1
     releaseName: loki
     namespace: loki-stack
     includeCRDs: true
     skipTests: true
-    valuesInline:
-      grafana:
-        enabled: false
+    valuesFile: values.yaml
+        

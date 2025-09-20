@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - namespace.yaml
+configMapGenerator:
+  - name: alloy-config
+    namespace: alloy
+    files:
+      - config.alloy
+    options:
+      disableNameSuffixHash: false
+helmCharts:
+  - name: alloy
+    repo: https://grafana.github.io/helm-charts
+    releaseName: alloy
+    namespace: alloy
+    includeCRDs: true
+    skipTests: true
+    valuesInline:
+      alloy:
+        configMap:
+          create: false
+          name: alloy-config
+          key: config.alloy
+        # run one alloy per node to read logs
+        mode: daemonset

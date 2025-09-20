@@ -9,3 +9,16 @@ helmCharts:
     includeCRDs: true
     skipTests: true
     namespace: prometheus
+    valuesInline:
+      grafana:
+        additionalDataSources:
+          - name: Loki
+            type: loki
+            access: proxy
+            url: http://loki-gateway.loki-stack.svc.cluster.local
+            jsonData:
+              tlsSkipVerify: true
+              httpHeaderName1: 'X-Scope-OrgID'
+            secureJsonData:
+              httpHeaderValue1: 'empty'
+              
