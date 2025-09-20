@@ -14,10 +14,16 @@
     pkgs.kubectx
     pkgs.openssl
     pkgs.sea-orm-cli
+    pkgs.kubernetes-helm
   ];
 
   # https://devenv.sh/languages/
-  languages.rust.enable = true;
+  languages.rust = {
+    enable = true;
+    channel = "stable";
+    version = "1.90.0";
+  };
+  
   languages.javascript = {
     enable = true;
     npm = {
