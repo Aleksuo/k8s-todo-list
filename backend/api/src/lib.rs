@@ -14,10 +14,7 @@ use reqwest::{
     header::{self, CONTENT_TYPE},
 };
 use sea_orm::{ActiveModelTrait, EntityTrait};
-use sea_orm::{
-    ActiveValue::{NotSet, Set},
-    ConnectOptions, Database, DatabaseConnection,
-};
+use sea_orm::{ActiveValue::Set, ConnectOptions, Database, DatabaseConnection};
 use serde::{Deserialize, Serialize};
 use std::env;
 pub use std::{
@@ -100,10 +97,9 @@ pub async fn main() {
             Database::connect(opt).await.unwrap()
         })
         .await;
-    Migrator::up(DB_CLIENT.get().unwrap(), None).await;
+    let _ = Migrator::up(DB_CLIENT.get().unwrap(), None).await;
     let app_state = AppState { http, config };
     let routes = Router::new()
-        .route("/hello-world", get(hello_world_handler))
         .route("/pic", get(get_pic_handler))
         .route("/todos", get(get_todos_handler))
         .route("/todos", post(create_todo_handler));
@@ -112,10 +108,6 @@ pub async fn main() {
     let listener = tokio::net::TcpListener::bind(server_address).await.unwrap();
     println!("Starting server at port {}", server_port);
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn hello_world_handler() -> String {
-    return "Hello World!".to_string();
 }
 
 async fn get_pic_handler(State(state): State<AppState>) -> impl IntoResponse {
@@ -189,7 +181,7 @@ async fn save_current_time_to_file(fpath: &String) {
         .unwrap();
 }
 
-async fn get_todos_handler(State(state): State<AppState>) -> Json<Vec<Todo>> {
+async fn get_todos_handler(State(_state): State<AppState>) -> Json<Vec<Todo>> {
     let all_todos: Vec<Todo> = todo::Entity::find()
         .all(DB_CLIENT.get().unwrap())
         .await
@@ -204,7 +196,7 @@ async fn get_todos_handler(State(state): State<AppState>) -> Json<Vec<Todo>> {
 }
 
 async fn create_todo_handler(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     extract::Json(payload): extract::Json<CreateTodo>,
 ) -> Json<Todo> {
     let new_todo = todo::ActiveModel {
