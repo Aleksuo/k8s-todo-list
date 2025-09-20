@@ -8,7 +8,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use entities::todo;
-use log::info;
+use log::{error, info};
 use migration::{Migrator, MigratorTrait};
 use reqwest::{
     Client, StatusCode,
@@ -214,8 +214,21 @@ async fn get_todos_handler(State(_state): State<AppState>) -> Json<Vec<Todo>> {
 async fn create_todo_handler(
     State(_state): State<AppState>,
     extract::Json(payload): extract::Json<CreateTodo>,
-) -> Json<Todo> {
+) -> impl IntoResponse {
     info!("Handling a create_todo request");
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json"),
+    );
+    if payload.value.len() > 140 {
+        error!(
+            "Todo value length {} exceeds the maximum value {}",
+            payload.value.len(),
+            140
+        );
+        return (StatusCode::UNPROCESSABLE_ENTITY, "Too long value").into_response();
+    }
     let new_todo = todo::ActiveModel {
         id: Set(Uuid::new_v4()),
         value: Set(payload.value.to_owned()),
@@ -227,5 +240,5 @@ async fn create_todo_handler(
         id: saved_todo.id,
         value: saved_todo.value,
     };
-    Json(todo_dto)
+    Json(todo_dto).into_response()
 }
