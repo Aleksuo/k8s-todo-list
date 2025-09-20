@@ -15,7 +15,7 @@ k8s_resource(
         link('http://localhost:8081/', 'App')
     ]
 )
-k8s_yaml(kustomize('infra/k8s/overlays/dev'))
+k8s_yaml(kustomize('infra/k8s/overlays/dev', flags=["--enable-helm"]))
 watch_file('./infra')
 
 k8s_resource(workload='db-stateful-set', port_forwards=5432)
