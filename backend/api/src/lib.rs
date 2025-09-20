@@ -8,6 +8,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use entities::todo;
+use log::info;
 use migration::{Migrator, MigratorTrait};
 use reqwest::{
     Client, StatusCode,
@@ -23,6 +24,8 @@ pub use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::OnceCell;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize)]
@@ -72,6 +75,13 @@ const DB_SCHEMA_ENV: &str = "DB_SCHEMA";
 
 #[tokio::main]
 pub async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .or_else(|_| EnvFilter::try_new("api=trace,tower_http=trace"))
+                .unwrap(),
+        )
+        .init();
     let http = Client::builder()
         .timeout(Duration::from_secs(5))
         .build()
@@ -102,15 +112,17 @@ pub async fn main() {
     let routes = Router::new()
         .route("/pic", get(get_pic_handler))
         .route("/todos", get(get_todos_handler))
-        .route("/todos", post(create_todo_handler));
+        .route("/todos", post(create_todo_handler))
+        .layer(TraceLayer::new_for_http());
 
     let app = Router::new().nest("/api", routes).with_state(app_state);
     let listener = tokio::net::TcpListener::bind(server_address).await.unwrap();
-    println!("Starting server at port {}", server_port);
+    info!("Starting server at port {}", server_port);
     axum::serve(listener, app).await.unwrap();
 }
 
 async fn get_pic_handler(State(state): State<AppState>) -> impl IntoResponse {
+    info!("Handling a get_pic request");
     let timestamp = tokio::fs::read_to_string(&state.config.timestamp_path).await;
     let timestamp = match timestamp {
         Ok(timestamp) => timestamp,
@@ -157,6 +169,7 @@ async fn get_new_pic_and_update_files(state: &AppState) -> Bytes {
 }
 
 async fn get_new_pic(state: &AppState) -> Bytes {
+    info!("Fetching a new pic");
     state
         .http
         .get("https://picsum.photos/200")
@@ -171,9 +184,11 @@ async fn get_new_pic(state: &AppState) -> Bytes {
 
 async fn save_pic_to_file(fpath: &String, img: &Bytes) {
     tokio::fs::write(fpath, img).await.unwrap();
+    info!("Saved a new pic to file {}", fpath);
 }
 
 async fn save_current_time_to_file(fpath: &String) {
+    info!("Saving current time to file {}", fpath);
     let cur_time = SystemTime::now();
     let cur_time_dt: DateTime<Utc> = cur_time.into();
     tokio::fs::write(fpath, cur_time_dt.to_string())
@@ -192,6 +207,7 @@ async fn get_todos_handler(State(_state): State<AppState>) -> Json<Vec<Todo>> {
             value: todo_model.value.clone(),
         })
         .collect();
+    info!("Handling a get_todos request");
     Json(all_todos)
 }
 
@@ -199,11 +215,14 @@ async fn create_todo_handler(
     State(_state): State<AppState>,
     extract::Json(payload): extract::Json<CreateTodo>,
 ) -> Json<Todo> {
+    info!("Handling a create_todo request");
     let new_todo = todo::ActiveModel {
         id: Set(Uuid::new_v4()),
         value: Set(payload.value.to_owned()),
     };
     let saved_todo: todo::Model = new_todo.insert(DB_CLIENT.get().unwrap()).await.unwrap();
+    info!("Saved a new Todo with id: {}", saved_todo.id);
+
     let todo_dto = Todo {
         id: saved_todo.id,
         value: saved_todo.value,

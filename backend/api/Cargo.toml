@@ -13,3 +13,8 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "fs"] }
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
 sea-orm = { version = "1.1.16", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
+tower = "0.5.2"
+tower-http = { version = "0.6.6", features = ["trace"] }
+tracing = "0.1.41"
+log = "0.4.28"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
